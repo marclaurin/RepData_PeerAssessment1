@@ -1,0 +1,92 @@
+---
+title: "MarcVL_PeerAssessment1"
+author: "MarcVaglioLaurin"
+date: "Thursday, March 12, 2015"
+output: html_document
+---
+
+This is an R Markdown document.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks 
+
+First, let's read the source data
+```{r readData, echo=TRUE}
+#read in data from csv dataset
+activity <- read.csv("activity.csv",na.strings="NA",colClasses=c("integer","Date","integer"))
+```
+
+Next, calculate and plot steps per day
+```{r totSteps, echo=TRUE}
+#calclate number of steps
+dailySteps <- aggregate(steps ~ date, activity, sum)
+#plot histogram of steps by day
+hist(dailySteps$steps, xlab="Number of Daily Steps",main="Total Steps per Day",col="red")
+```
+
+Now, output counts for total, mean, median steps per day
+```{r stepStats,echo=TRUE}
+#calc total steps, mean steps, and median steps
+totalSteps <- dailySteps$steps
+meanSteps <- mean(totalSteps)
+medianSteps <- median(totalSteps)
+#output mean and median number of steps
+paste("Mean Number of Steps=", round(meanSteps))
+paste("Median Number of Steps=", round(medianSteps))
+```
+
+Calculate and plot average daily activity
+```{r stepsInterval,echo=TRUE}
+#calc number of steps by interval
+stepsInterval <- aggregate(steps ~ interval, activity, sum,na.rm=TRUE)
+#plot thw number of steps by interval
+plot(stepsInterval$interval,stepsInterval$steps, type="l", xlab="Interval", ylab="Avg Number of Steps",main="Average Number of Daily Steps by Interval")
+#return info for interval with max number of steps
+maxStepsInt <- stepsInterval$interval[which(stepsInterval$steps == max(stepsInterval$steps))]
+paste("Interval with maximum steps=", round(maxStepsInt))
+#return count for max number of steps
+maxNoSteps <- round(max(stepsInterval$steps))
+paste("Maximum number of steps=", round(maxNoSteps))
+```
+
+Impute missing values with the mean value for the interval
+```{r imputeMissing, echo=TRUE}
+#impute NA values with mean for the time interval
+totalNA <- sum(is.na(activity$steps))
+paste("Total Number of Missing Values=", totalNA)
+totalNotNA <- sum(!is.na(activity$steps))
+paste("Total Number of Non-Missing Values=", sum(!is.na(activity$steps)))
+totalObs <- round(sum(totalNA,totalNotNA))
+paste("Total Number of Observations=",totalObs)
+imputed <- activity
+naSteps <- is.na(imputed$steps)
+notNASteps <- (subset(activity,!is.na(imputed$steps)))
+intervalAvg <- round(tapply(imputed$steps, imputed$interval, mean, na.rm=TRUE, simplify=TRUE))
+imputed$steps[naSteps] <- intervalAvg[as.character(imputed$interval[naSteps])]
+imputedDailySteps <- round(tapply(imputed$steps, imputed$date, sum, na.rm=TRUE, simplify=TRUE))
+#plot the new total steps with imputed values
+hist(imputedDailySteps, xlab="Number of Steps",main="Average Number of Daily Steps by Interval, with  missing values imputed",col="blue")
+#return count for new mean & median number of steps
+paste("Mean Number of steps=", round(mean(imputedDailySteps)))
+paste("Median Number of steps=", round(median(imputedDailySteps)))
+```
+
+Determine differences in activity between weekdays and weekends
+```{r dailyPattern, echo=TRUE}
+#define weekdays & weekends
+imputed$day <- weekdays(as.Date(imputed$date))
+weekday <- subset(imputed, day %in% c("Monday", "Tuesday", "Wednesday", "Thursday","Friday"))
+weekend <- subset(imputed,day %in% c("Saturday", "Sunday"))
+#calc steps for weekdays & weekends
+wkdays=with(weekday,tapply(steps,interval,mean))
+#wkdaySteps <- aggregate(steps~weekday,imputed,mean)
+wkends=with(weekend,tapply(steps,interval,mean))
+#plot results
+plot(wkdays,type='l',xlab="Weekdays",ylab="Steps")
+plot(wkends,type='l',xlab="Weekends",ylab="Steps")
+#return info for intervals with max number of steps
+maxWkdayInt <- weekday$interval[which(weekday$steps == max(weekday$steps))]
+paste("Weekday interval with maximum steps=", round(maxWkdayInt))
+paste("Weekday Maximum Number of steps=", round(max(weekday$steps)))
+maxWkendInt <- weekend$interval[which(weekend$steps == max(weekend$steps))]
+paste("Weekend interval with maximum steps=", round(maxWkendInt))
+paste("Weekend Maximum Number of steps=", round(max(weekend$steps)))
